@@ -1,0 +1,7 @@
+{
+  "name": "IUB - The Islamia University of Bahawalpur Clone",
+  "description": "A professional, high-performance university portal with real-time news, department browsing, and an integrated Gemini-powered AI academic assistant.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
