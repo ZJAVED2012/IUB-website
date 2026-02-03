@@ -111,6 +111,7 @@ export const DEPARTMENTS: Department[] = [
         image: 'https://i.pravatar.cc/150?u=2',
         bio: 'Dr. Sara Khan specializes in Natural Language Processing and Machine Learning. Her research focuses on low-resource language processing, particularly Urdu and regional dialects of Pakistan.',
         linkedin: 'https://linkedin.com/in/sara-khan-nlp',
+        website: 'https://sarakhan.faculty.iub.edu.pk',
         researchInterests: ['Urdu NLP', 'Deep Learning', 'Computer Vision'],
         publications: [
           {
@@ -159,6 +160,7 @@ export const DEPARTMENTS: Department[] = [
         image: 'https://i.pravatar.cc/150?u=4',
         bio: 'Dr. Bilal is a renowned researcher in Cardiology with a focus on preventative medicine. He has served as a consultant for the World Health Organization on regional health policies.',
         linkedin: 'https://linkedin.com/in/bilal-qureshi-md',
+        website: 'https://bilalqureshi.faculty.iub.edu.pk',
         researchInterests: ['Cardiovascular Health', 'Preventative Medicine', 'Global Health'],
         publications: [
           {
@@ -205,6 +207,7 @@ export const DEPARTMENTS: Department[] = [
         image: 'https://i.pravatar.cc/150?u=6',
         bio: 'Expert in Islamic Finance and Emerging Market Economics. Dr. Khalid has advised several national banks on financial restructuring.',
         linkedin: 'https://linkedin.com/in/khalid-mehmood-finance',
+        website: 'https://khalidmehmood.faculty.iub.edu.pk',
         researchInterests: ['Islamic Banking', 'Portfolio Management', 'Corporate Governance'],
         publications: [
           {
@@ -246,6 +249,7 @@ export const DEPARTMENTS: Department[] = [
         image: 'https://i.pravatar.cc/150?u=8',
         bio: 'Social historian and sociologist focusing on agrarian change and social movements in South Asia.',
         linkedin: 'https://linkedin.com/in/hassan-javid-iub',
+        website: 'https://hassanjavid.faculty.iub.edu.pk',
         researchInterests: ['Political Sociology', 'Rural Development', 'History of Punjab'],
         publications: [
           {
