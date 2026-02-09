@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Hero from '../components/Hero';
 import { STATS, NEWS, DEPARTMENTS } from '../constants';
-import { Users, GraduationCap, BookOpen, Building2, Calendar, ArrowRight, Sparkles, Loader2, CheckCircle } from 'lucide-react';
+import { Users, GraduationCap, BookOpen, Building2, Calendar, ArrowRight, Sparkles, Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
 import { generateDepartmentImage } from '../geminiService';
 import { Page } from '../App';
 
@@ -13,39 +13,32 @@ interface HomeProps {
 
 const Home: React.FC<HomeProps> = ({ navigate, departmentImages, setDepartmentImages }) => {
   const [loadingImages, setLoadingImages] = useState<{ [key: string]: boolean }>({});
-  const [autoGenerating, setAutoGenerating] = useState(false);
+  const [errorImages, setErrorImages] = useState<{ [key: string]: boolean }>({});
 
   const handleGenerateImage = useCallback(async (deptId: string, deptName: string) => {
     if (loadingImages[deptId] || departmentImages[deptId]) return;
     
     setLoadingImages(prev => ({ ...prev, [deptId]: true }));
+    setErrorImages(prev => ({ ...prev, [deptId]: false }));
+    
     try {
       const imageUrl = await generateDepartmentImage(deptName);
       if (imageUrl) {
         setDepartmentImages(prev => ({ ...prev, [deptId]: imageUrl }));
+      } else {
+        // If it returns null, it likely hit a quota limit or safety filter
+        setErrorImages(prev => ({ ...prev, [deptId]: true }));
       }
     } catch (error) {
       console.error(`Failed to generate image for ${deptName}:`, error);
+      setErrorImages(prev => ({ ...prev, [deptId]: true }));
     } finally {
       setLoadingImages(prev => ({ ...prev, [deptId]: false }));
     }
   }, [loadingImages, departmentImages, setDepartmentImages]);
 
-  // Automatically trigger generation for departments without AI images on mount
-  useEffect(() => {
-    const missingDepts = DEPARTMENTS.filter(dept => !departmentImages[dept.id]);
-    if (missingDepts.length > 0 && !autoGenerating) {
-      setAutoGenerating(true);
-      
-      // Process generation with a slight delay between each to avoid potential rate issues
-      // and provide a better visual "staggered" loading effect
-      missingDepts.forEach((dept, index) => {
-        setTimeout(() => {
-          handleGenerateImage(dept.id, dept.name);
-        }, index * 800);
-      });
-    }
-  }, []); // Only run once on mount
+  // Removed auto-generation on mount to respect API rate limits and avoid 429 errors.
+  // Users must now manually trigger "AI Campus View" to generate custom imagery.
 
   const StatIcon = ({ icon }: { icon: string }) => {
     switch (icon) {
@@ -145,6 +138,8 @@ const Home: React.FC<HomeProps> = ({ navigate, departmentImages, setDepartmentIm
                     className={`w-full flex items-center justify-center gap-3 backdrop-blur-xl border border-white/40 text-white text-[11px] font-black uppercase tracking-widest px-4 py-3 rounded-xl transition-all shadow-xl group/btn ${
                       departmentImages[dept.id] 
                         ? 'bg-[#004d2c]/60 border-[#004d2c]/20' 
+                        : errorImages[dept.id]
+                        ? 'bg-red-900/40 border-red-400/30'
                         : 'bg-white/10 hover:bg-white/30'
                     }`}
                   >
@@ -157,6 +152,11 @@ const Home: React.FC<HomeProps> = ({ navigate, departmentImages, setDepartmentIm
                       <>
                         <CheckCircle size={16} className="text-yellow-400" />
                         AI Enhanced View
+                      </>
+                    ) : errorImages[dept.id] ? (
+                      <>
+                        <AlertTriangle size={16} className="text-red-400" />
+                        Quota Full - Retry?
                       </>
                     ) : (
                       <>

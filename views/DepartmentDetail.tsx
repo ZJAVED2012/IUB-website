@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Page } from '../App';
 import { DEPARTMENTS } from '../constants';
 import { FacultyMember, ChatMessage, Publication } from '../types';
@@ -9,7 +9,7 @@ import {
   Linkedin, Globe, X, ExternalLink, FileText,
   Clock, CheckCircle, Send, Sparkles, Loader2, BookOpen, Quote,
   Presentation, FileDigit, CalendarDays, ScrollText, Award,
-  Newspaper, Download, Info, Mic2
+  Newspaper, Download, Info, Mic2, Filter, ChevronDown
 } from 'lucide-react';
 
 interface DepartmentDetailProps {
@@ -26,6 +26,12 @@ const DepartmentDetail: React.FC<DepartmentDetailProps> = ({ deptId, navigate, d
   const [isBioGenerating, setIsBioGenerating] = useState(false);
   const [generatedBios, setGeneratedBios] = useState<{ [key: string]: string }>({});
   const [activeTab, setActiveTab] = useState('overview');
+  
+  // Faculty filtering states
+  const [facultySearchQuery, setFacultySearchQuery] = useState('');
+  const [designationFilter, setDesignationFilter] = useState('All');
+  const [researchFilter, setResearchFilter] = useState('All');
+  
   const facultyChatScrollRef = useRef<HTMLDivElement>(null);
 
   const department = DEPARTMENTS.find(d => d.id === deptId);
@@ -72,6 +78,29 @@ const DepartmentDetail: React.FC<DepartmentDetailProps> = ({ deptId, navigate, d
     }
   }, [facultyChatMessages, isFacultyChatLoading]);
 
+  // Extract unique designations and research areas for filters
+  const filterOptions = useMemo(() => {
+    if (!department?.facultyMembers) return { designations: [], researchAreas: [] };
+    
+    const designations = Array.from(new Set(department.facultyMembers.map(m => m.designation)));
+    const researchAreas = Array.from(new Set(department.facultyMembers.flatMap(m => m.researchInterests || [])));
+    
+    return { designations, researchAreas };
+  }, [department]);
+
+  // Filtered faculty list
+  const filteredFaculty = useMemo(() => {
+    if (!department?.facultyMembers) return [];
+    
+    return department.facultyMembers.filter(member => {
+      const matchesSearch = member.name.toLowerCase().includes(facultySearchQuery.toLowerCase());
+      const matchesDesignation = designationFilter === 'All' || member.designation === designationFilter;
+      const matchesResearch = researchFilter === 'All' || (member.researchInterests && member.researchInterests.includes(researchFilter));
+      
+      return matchesSearch && matchesDesignation && matchesResearch;
+    });
+  }, [department, facultySearchQuery, designationFilter, researchFilter]);
+
   if (!department) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -104,7 +133,7 @@ const DepartmentDetail: React.FC<DepartmentDetailProps> = ({ deptId, navigate, d
 
     const userMsg = facultyChatInput.trim();
     setFacultyChatInput('');
-    setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+    setFacultyChatMessages(prev => [...prev, { role: 'user', content: userMsg }]);
     setIsFacultyChatLoading(true);
 
     const publicationsText = selectedFaculty.publications?.map(p => 
@@ -132,10 +161,6 @@ const DepartmentDetail: React.FC<DepartmentDetailProps> = ({ deptId, navigate, d
     } finally {
       setIsFacultyChatLoading(false);
     }
-  };
-
-  const setMessages = (setter: any) => {
-    setFacultyChatMessages(setter);
   };
 
   const deptImage = departmentImages[department.id] || department.image;
@@ -312,16 +337,99 @@ const DepartmentDetail: React.FC<DepartmentDetailProps> = ({ deptId, navigate, d
                   <p className="text-xs text-slate-400 font-black uppercase tracking-[0.3em] mt-1">Visionary Mentors</p>
                 </div>
               </div>
-              <button className="bg-slate-900 text-white px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#004d2c] transition-all shadow-xl">
-                Faculty Directory
-              </button>
             </div>
+
+            {/* Faculty Search and Filter Interface */}
+            <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-xl mb-12">
+              <div className="flex flex-col lg:flex-row gap-6">
+                <div className="flex-1 relative group">
+                  <div className="absolute left-6 top-1/2 -translate-y-1/2 text-[#004d2c] group-focus-within:text-yellow-500 transition-colors">
+                    <Search size={22} />
+                  </div>
+                  <input 
+                    type="text" 
+                    value={facultySearchQuery}
+                    onChange={(e) => setFacultySearchQuery(e.target.value)}
+                    placeholder="Find faculty member by name..." 
+                    className="w-full pl-16 pr-6 py-5 rounded-3xl bg-slate-50 border-2 border-transparent focus:border-[#004d2c]/20 focus:bg-white outline-none font-bold text-slate-700 transition-all shadow-inner"
+                  />
+                </div>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="relative">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                      <Filter size={18} />
+                    </div>
+                    <select 
+                      value={designationFilter}
+                      onChange={(e) => setDesignationFilter(e.target.value)}
+                      className="pl-12 pr-10 py-5 rounded-3xl bg-slate-50 border-none appearance-none font-bold text-[11px] uppercase tracking-widest text-slate-600 outline-none focus:ring-4 focus:ring-[#004d2c]/5 cursor-pointer shadow-sm min-w-[180px]"
+                    >
+                      <option value="All">All Designations</option>
+                      {filterOptions.designations.map(des => (
+                        <option key={des} value={des}>{des}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  </div>
+
+                  <div className="relative">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                      <Microscope size={18} />
+                    </div>
+                    <select 
+                      value={researchFilter}
+                      onChange={(e) => setResearchFilter(e.target.value)}
+                      className="pl-12 pr-10 py-5 rounded-3xl bg-slate-50 border-none appearance-none font-bold text-[11px] uppercase tracking-widest text-slate-600 outline-none focus:ring-4 focus:ring-[#004d2c]/5 cursor-pointer shadow-sm min-w-[200px]"
+                    >
+                      <option value="All">Research Area</option>
+                      {filterOptions.researchAreas.map(area => (
+                        <option key={area} value={area}>{area}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Active Filter Indicators */}
+              {(facultySearchQuery || designationFilter !== 'All' || researchFilter !== 'All') && (
+                <div className="mt-8 flex flex-wrap items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest mr-2">Applied Filters:</span>
+                  {facultySearchQuery && (
+                    <div className="bg-[#004d2c]/5 text-[#004d2c] px-3 py-1.5 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 border border-[#004d2c]/10">
+                      Query: {facultySearchQuery} <X size={12} className="cursor-pointer" onClick={() => setFacultySearchQuery('')} />
+                    </div>
+                  )}
+                  {designationFilter !== 'All' && (
+                    <div className="bg-[#004d2c]/5 text-[#004d2c] px-3 py-1.5 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 border border-[#004d2c]/10">
+                      Role: {designationFilter} <X size={12} className="cursor-pointer" onClick={() => setDesignationFilter('All')} />
+                    </div>
+                  )}
+                  {researchFilter !== 'All' && (
+                    <div className="bg-[#004d2c]/5 text-[#004d2c] px-3 py-1.5 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 border border-[#004d2c]/10">
+                      Research: {researchFilter} <X size={12} className="cursor-pointer" onClick={() => setResearchFilter('All')} />
+                    </div>
+                  )}
+                  <button 
+                    onClick={() => {
+                      setFacultySearchQuery('');
+                      setDesignationFilter('All');
+                      setResearchFilter('All');
+                    }}
+                    className="text-[10px] font-black text-red-400 hover:text-red-500 uppercase tracking-widest ml-4"
+                  >
+                    Clear All
+                  </button>
+                </div>
+              )}
+            </div>
+
             <div className="grid md:grid-cols-2 gap-10">
-              {department.facultyMembers?.map((member, i) => (
+              {filteredFaculty.map((member, i) => (
                 <div 
                   key={i} 
                   onClick={() => setSelectedFaculty(member)}
-                  className="bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-xl hover:shadow-2xl transition-all group hover:-translate-y-2 flex flex-col gap-8 cursor-pointer relative overflow-hidden"
+                  className="bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-xl hover:shadow-2xl transition-all group hover:-translate-y-2 flex flex-col gap-8 cursor-pointer relative overflow-hidden animate-in fade-in duration-300"
                 >
                   <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-bl-full -mr-16 -mt-16 group-hover:bg-[#004d2c]/5 transition-colors"></div>
                   <div className="flex items-center gap-6 relative z-10">
@@ -375,6 +483,26 @@ const DepartmentDetail: React.FC<DepartmentDetailProps> = ({ deptId, navigate, d
                   </div>
                 </div>
               ))}
+              
+              {filteredFaculty.length === 0 && (
+                <div className="col-span-full py-24 text-center bg-white rounded-[4rem] border-4 border-dashed border-slate-100">
+                  <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-300">
+                    <Search size={40} />
+                  </div>
+                  <h4 className="text-2xl font-black text-slate-400">No faculty members found</h4>
+                  <p className="text-slate-300 font-bold uppercase text-[10px] tracking-widest mt-2">Try adjusting your search or filters</p>
+                  <button 
+                    onClick={() => {
+                      setFacultySearchQuery('');
+                      setDesignationFilter('All');
+                      setResearchFilter('All');
+                    }}
+                    className="mt-8 bg-slate-100 hover:bg-slate-200 text-slate-500 px-8 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all"
+                  >
+                    Reset Dashboard
+                  </button>
+                </div>
+              )}
             </div>
           </section>
 
@@ -685,27 +813,40 @@ const DepartmentDetail: React.FC<DepartmentDetailProps> = ({ deptId, navigate, d
                         const title = isStructured ? (pub as Publication).title : pub as string;
                         const year = isStructured ? (pub as Publication).year : null;
                         const journal = isStructured ? (pub as Publication).journal : null;
+                        const link = isStructured ? (pub as Publication).link : null;
 
                         return (
-                          <div key={i} className="group relative bg-white border border-slate-100 p-6 rounded-[2rem] shadow-sm hover:shadow-xl transition-all border-l-8 border-l-[#004d2c]">
+                          <div key={i} className="group relative bg-white border border-slate-100 p-6 rounded-[2.5rem] shadow-sm hover:shadow-xl transition-all border-l-8 border-l-[#004d2c] overflow-hidden">
                             <div className="flex items-start gap-5">
                               <div className="mt-1 flex-shrink-0">
-                                 <ScrollText size={20} className="text-[#004d2c] opacity-20 group-hover:opacity-60 transition-opacity" />
+                                 <div className="bg-[#004d2c]/5 p-3 rounded-2xl text-[#004d2c] group-hover:bg-[#004d2c] group-hover:text-white transition-all duration-300">
+                                   <Book size={18} />
+                                 </div>
                               </div>
                               <div className="flex-1">
-                                <p className="text-[14px] font-black text-slate-900 leading-snug group-hover:text-[#004d2c] transition-colors mb-4">
+                                <p className="text-[15px] font-black text-slate-900 leading-snug group-hover:text-[#004d2c] transition-colors mb-3">
                                   {title}
                                 </p>
                                 <div className="flex flex-wrap items-center gap-3">
+                                  {journal && (
+                                    <span className="inline-flex items-center gap-2 text-[11px] font-bold text-[#004d2c] italic bg-[#004d2c]/5 px-3 py-1 rounded-lg">
+                                      <Quote size={10} className="opacity-40" /> {journal}
+                                    </span>
+                                  )}
                                   {year && (
-                                    <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[9px] font-black bg-slate-100 text-slate-600 uppercase tracking-widest">
+                                    <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[9px] font-black bg-slate-100 text-slate-500 uppercase tracking-widest border border-slate-200">
                                       <CalendarDays size={12} /> {year}
                                     </span>
                                   )}
-                                  {journal && (
-                                    <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[9px] font-black bg-[#004d2c]/5 text-[#004d2c] uppercase tracking-widest italic border border-[#004d2c]/10">
-                                      {journal}
-                                    </span>
+                                  {link && (
+                                    <a 
+                                      href={link} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="ml-auto flex items-center gap-2 text-[9px] font-black text-slate-400 hover:text-[#004d2c] uppercase tracking-[0.2em] transition-all"
+                                    >
+                                      View Publication <ExternalLink size={12} />
+                                    </a>
                                   )}
                                 </div>
                               </div>
@@ -855,7 +996,6 @@ const DepartmentDetail: React.FC<DepartmentDetailProps> = ({ deptId, navigate, d
                   <input 
                     type="text"
                     value={facultyChatInput}
-                    // Fix: Typo setInput to setFacultyChatInput
                     onChange={(e) => setFacultyChatInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleFacultyChatSend()}
                     placeholder={`Query research regarding Prof. ${selectedFaculty.name.split(' ').pop()}...`}

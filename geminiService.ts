@@ -3,7 +3,6 @@ import { Publication } from "./types";
 
 export const getGeminiResponse = async (prompt: string, customSystemInstruction?: string) => {
   try {
-    // Correctly initialize GoogleGenAI with process.env.API_KEY per coding guidelines
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
@@ -17,15 +16,17 @@ export const getGeminiResponse = async (prompt: string, customSystemInstruction?
       },
     });
     return response.text;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gemini Error:", error);
+    if (error?.message?.includes('429')) {
+      return "The campus assistant is currently busy with many requests. Please try again in a few moments.";
+    }
     return "I'm having trouble connecting to the campus server. Please try again later.";
   }
 };
 
 export const generateDepartmentImage = async (departmentName: string) => {
   try {
-    // Correctly initialize GoogleGenAI with process.env.API_KEY per coding guidelines
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const prompt = `A professional, high-quality, wide-angle architectural photograph of the ${departmentName} building at a modern Islamic university campus. The style should be clean, academic, and majestic, with clear blue sky and landscaped surroundings. Realistic photography style.`;
     
@@ -51,8 +52,12 @@ export const generateDepartmentImage = async (departmentName: string) => {
       }
     }
     return null;
-  } catch (error) {
-    console.error("Image Generation Error:", error);
+  } catch (error: any) {
+    if (error?.message?.includes('429')) {
+      console.warn("Image Generation Quota Exhausted (429). Please wait before requesting more images.");
+    } else {
+      console.error("Image Generation Error:", error);
+    }
     return null;
   }
 };
@@ -81,7 +86,7 @@ export const generateFacultyBio = async (name: string, designation: string, qual
       },
     });
     return response.text;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Bio Generation Error:", error);
     return null;
   }
